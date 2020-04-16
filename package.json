@@ -3,7 +3,7 @@
   "version": "0.0.0",
   "private": true,
   "description": "TypeScript template action",
-  "main": "lib/main.js",
+  "main": "lib/build-jdk-openj9.js",
   "scripts": {
     "build": "tsc",
     "format": "prettier --write **/*.ts",
@@ -25,7 +25,9 @@
   "author": "YourNameOrOrganization",
   "license": "MIT",
   "dependencies": {
-    "@actions/core": "^1.2.0"
+    "@actions/core": "^1.2.0",
+    "@actions/exec": "^1.0.3",
+    "@actions/tool-cache": "^1.3.3"
   },
   "devDependencies": {
     "@types/jest": "^24.0.23",
