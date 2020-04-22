@@ -1,0 +1,21 @@
+name: "build-jdk-openj9"
+on: # rebuild any PRs and main branch changes
+  pull_request:
+  push:
+
+jobs:
+  build:
+    runs-on: ubuntu-16.04
+    steps:
+    - uses: actions/checkout@v1
+    - uses: ./
+      id: buildOpenj9
+      with: 
+        version: 14
+    - uses: actions/upload-artifact@v2-preview
+      if: failure()
+      with:
+        name: configure_output
+        path: ./**/config.log
+
+# Test version 8: https://github.com/sophia-guo/build-jdk-openj9/runs/603106058?check_suite_focus=true
