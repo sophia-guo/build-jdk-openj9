@@ -3176,15 +3176,13 @@ const core = __importStar(__webpack_require__(470));
 const tc = __importStar(__webpack_require__(533));
 const io = __importStar(__webpack_require__(1));
 const workDir = process.env['GITHUB_WORKSPACE'];
-core.info(`workdir is ${workDir}`);
-function buildJDK(version, user, branch) {
+function buildJDK(version, usePersonalRepo) {
     return __awaiter(this, void 0, void 0, function* () {
         const openj9Version = `openj9-openjdk-jdk${version}`;
         yield installDependencies(version);
         process.chdir(`${workDir}`);
-        yield getSource(openj9Version, user, branch);
+        yield getSource(openj9Version, usePersonalRepo);
         yield exec.exec(`make all`);
-        core.info('testing............');
         let platform = 'linux-x86_64-normal-server-release';
         if (version === '14')
             platform = 'linux-x86_64-server-release'; // TODO: this looks like a error in the README of Eclipse Openj9
@@ -3242,7 +3240,6 @@ function installDependencies(version) {
     zip');
         yield io.rmRF(`/var/lib/apt/lists/*`);
         if (version === '8') {
-            core.info(` are we in correct location? which should be for ${version}`);
             yield exec.exec('sudo add-apt-repository ppa:openjdk-r/ppa');
             yield exec.exec(`sudo apt-get update`);
             yield exec.exec('sudo apt-get install -qq -y --no-install-recommends openjdk-7-jdk');
@@ -3262,9 +3259,7 @@ function installDependencies(version) {
             core.addPath(`${workDir}/bootjdk/bin`);
         }
         process.chdir('/usr/local');
-        core.info(`current path is ${process.cwd()}`);
         const gccBinary = yield tc.downloadTool(`https://ci.adoptopenjdk.net/userContent/gcc/gcc730+ccache.x86_64.tar.xz`);
-        core.info(`current path is ${process.cwd()}`);
         yield exec.exec(`ls -l ${gccBinary}`);
         yield exec.exec(`sudo tar -xJ --strip-components=1 -C /usr/local -f ${gccBinary}`);
         yield io.rmRF(`${gccBinary}`);
@@ -3278,12 +3273,45 @@ function installDependencies(version) {
         yield io.rmRF(`${freeMarker}`);
     });
 }
-function getSource(openj9Version, user, branch) {
+function getSource(openj9Version, usePersonalRepo) {
     return __awaiter(this, void 0, void 0, function* () {
-        yield exec.exec(`git clone -b ${branch} https://github.com/${user}/${openj9Version}`);
+        let openjdkOpenj9Repo = `ibmruntimes/${openj9Version}`;
+        let openjdkOpenj9Branch = 'openj9';
+        let omrRepo = '';
+        let omrBranch = '';
+        let openj9Repo = '';
+        let openj9Branch = '';
+        if (usePersonalRepo) {
+            const repo = process.env.GITHUB_REPOSITORY;
+            const ref = process.env.GITHUB_REF;
+            const branch = ref.substr(ref.lastIndexOf('/') + 1);
+            if (repo.includes(`/${openj9Version}`)) {
+                openjdkOpenj9Repo = repo;
+                openjdkOpenj9Branch = branch;
+            }
+            else if (repo.includes('/openj9-omr')) {
+                omrRepo = repo;
+                omrBranch = branch;
+            }
+            else if (repo.includes('/openj9')) {
+                openj9Repo = repo;
+                openj9Branch = branch;
+            }
+            else {
+                core.error(`${repo} is not one of openj9-openjdk-jdk8|11|12..., openj9, omr`);
+            }
+        }
+        yield exec.exec(`git clone -b ${openjdkOpenj9Branch} https://github.com/${openjdkOpenj9Repo}.git`);
         process.chdir(`${openj9Version}`);
-        core.info(`current path is ${process.cwd()}`);
-        yield exec.exec(`bash ./get_source.sh`);
+        let omrParameters = '';
+        let openj9Parameters = '';
+        if (omrRepo.length !== 0) {
+            omrParameters = `-omr-repo=https://github.com/${omrRepo}.git -omr-branch=${omrBranch}`;
+        }
+        if (openj9Repo.length !== 0) {
+            openj9Parameters = `-openj9-repo=https://github.com/${openj9Repo}.git -openj9-branch=${openj9Branch}`;
+        }
+        yield exec.exec(`bash ./get_source.sh ${omrParameters} ${openj9Parameters}`);
         yield exec.exec(`bash configure --with-freemarker-jar=${workDir}/freemarker.jar`);
     });
 }
@@ -4334,16 +4362,14 @@ const builder = __importStar(__webpack_require__(532));
 function run() {
     return __awaiter(this, void 0, void 0, function* () {
         try {
-            let version = core.getInput('version', { required: false });
-            let user = core.getInput('user', { required: false });
-            let branch = core.getInput('branch', { required: false });
-            if (!version)
-                version = '8'; // same as branch
-            if (!user)
-                user = 'ibmruntimes'; // same as branch
-            if (!branch)
-                branch = 'openj9'; // if action with default, this should not be necessary
-            yield builder.buildJDK(version, user, branch);
+            const version = core.getInput('version', { required: false });
+            const repository = core.getInput('repository', { required: false });
+            const ref = core.getInput('ref', { required: false });
+            const usePersonalRepo = core.getInput('usePersonalRepo') === 'true';
+            if (repository.length === 0 && ref.length !== 0) {
+                core.error(`Please give repository name`);
+            }
+            yield builder.buildJDK(version, usePersonalRepo);
         }
         catch (error) {
             core.setFailed(error.message);
