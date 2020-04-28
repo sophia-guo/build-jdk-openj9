@@ -3,13 +3,14 @@ import * as builder from './builder'
 
 async function run(): Promise<void> {
   try {
-    let version = core.getInput('version', {required: false})
-    let user = core.getInput('user', {required: false})
-    let branch = core.getInput('branch', {required: false})
-    if (!version) version = '8' // same as branch
-    if (!user) user = 'ibmruntimes' // same as branch
-    if (!branch) branch = 'openj9' // if action with default, this should not be necessary
-    await builder.buildJDK(version, user, branch)
+    const version = core.getInput('version', {required: false})
+    const repository = core.getInput('repository', {required: false})
+    const ref = core.getInput('ref', {required: false})
+    const usePersonalRepo = core.getInput('usePersonalRepo') === 'true'
+    if (repository.length === 0 && ref.length !== 0) {
+      core.error(`Please give repository name`)
+    }
+    await builder.buildJDK(version, usePersonalRepo)
   } catch (error) {
     core.setFailed(error.message)
   }

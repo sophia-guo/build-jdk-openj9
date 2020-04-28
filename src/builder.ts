@@ -4,18 +4,15 @@ import * as tc from '@actions/tool-cache'
 import * as io from '@actions/io'
 
 const workDir = process.env['GITHUB_WORKSPACE']
-core.info(`workdir is ${workDir}`)
 export async function buildJDK(
   version: string,
-  user: string,
-  branch: string
+  usePersonalRepo: boolean
 ): Promise<void> {
   const openj9Version = `openj9-openjdk-jdk${version}`
   await installDependencies(version)
   process.chdir(`${workDir}`)
-  await getSource(openj9Version, user, branch)
+  await getSource(openj9Version, usePersonalRepo)
   await exec.exec(`make all`)
-  core.info('testing............')
   let platform = 'linux-x86_64-normal-server-release'
   if (version === '14') platform = 'linux-x86_64-server-release' // TODO: this looks like a error in the README of Eclipse Openj9
   let jdkImages
@@ -74,7 +71,6 @@ async function installDependencies(version: string): Promise<void> {
   await io.rmRF(`/var/lib/apt/lists/*`)
 
   if (version === '8') {
-    core.info(` are we in correct location? which should be for ${version}`)
     await exec.exec('sudo add-apt-repository ppa:openjdk-r/ppa')
     await exec.exec(`sudo apt-get update`)
     await exec.exec(
@@ -98,9 +94,7 @@ async function installDependencies(version: string): Promise<void> {
   }
 
   process.chdir('/usr/local')
-  core.info(`current path is ${process.cwd()}`)
   const gccBinary = await tc.downloadTool(`https://ci.adoptopenjdk.net/userContent/gcc/gcc730+ccache.x86_64.tar.xz`)
-  core.info(`current path is ${process.cwd()}`)
   await exec.exec(`ls -l ${gccBinary}`)
   await exec.exec(`sudo tar -xJ --strip-components=1 -C /usr/local -f ${gccBinary}`)
   await io.rmRF(`${gccBinary}`)
@@ -117,12 +111,42 @@ async function installDependencies(version: string): Promise<void> {
 
 async function getSource(
   openj9Version: string,
-  user: string,
-  branch: string
+  usePersonalRepo: boolean
 ): Promise<void> {
-  await exec.exec(`git clone -b ${branch} https://github.com/${user}/${openj9Version}`)
+  let openjdkOpenj9Repo = `ibmruntimes/${openj9Version}`
+  let openjdkOpenj9Branch = 'openj9'
+  let omrRepo = ''
+  let omrBranch = ''
+  let openj9Repo = ''
+  let openj9Branch = ''
+  if (usePersonalRepo) {
+    const repo = process.env.GITHUB_REPOSITORY as string
+    const ref = process.env.GITHUB_REF as string
+    const branch = ref.substr(ref.lastIndexOf('/') + 1)
+    if (repo.includes(`/${openj9Version}`)) {
+      openjdkOpenj9Repo = repo
+      openjdkOpenj9Branch = branch
+    } else if (repo.includes('/openj9-omr')) {
+      omrRepo = repo
+      omrBranch = branch
+    } else if (repo.includes('/openj9')) {
+      openj9Repo = repo
+      openj9Branch = branch
+    } else {
+      core.error(`${repo} is not one of openj9-openjdk-jdk8|11|12..., openj9, omr`)
+    }
+  }
+
+  await exec.exec(`git clone -b ${openjdkOpenj9Branch} https://github.com/${openjdkOpenj9Repo}.git`)
   process.chdir(`${openj9Version}`)
-  core.info(`current path is ${process.cwd()}`)
-  await exec.exec(`bash ./get_source.sh`)
+  let omrParameters = ''
+  let openj9Parameters = ''
+  if (omrRepo.length !== 0) {
+    omrParameters = `-omr-repo=https://github.com/${omrRepo}.git -omr-branch=${omrBranch}`
+  }
+  if (openj9Repo.length !== 0) {
+    openj9Parameters = `-openj9-repo=https://github.com/${openj9Repo}.git -openj9-branch=${openj9Branch}`
+  }
+  await exec.exec(`bash ./get_source.sh ${omrParameters} ${openj9Parameters}`)
   await exec.exec(`bash configure --with-freemarker-jar=${workDir}/freemarker.jar`)
 }
