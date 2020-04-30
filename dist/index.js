@@ -3250,7 +3250,7 @@ function installDependencies(version) {
             yield exec.exec('sudo apt-get install -qq -y --no-install-recommends libxrandr-dev');
             yield io.rmRF(`/var/lib/apt/lists/*`);
             const bootjdkVersion = (parseInt(version) - 1).toString();
-            const bootjdkJar = yield tc.downloadTool(`https://api.adoptopenjdk.net/v2/binary/releases/openjdk${bootjdkVersion}?openjdk_impl=openj9&os=linux&arch=x64&release=latest&heap_size=normal&type=jdk`);
+            const bootjdkJar = yield tc.downloadTool(`https://api.adoptopenjdk.net/v3/binary/latest/${bootjdkVersion}/ga/linux/x64/jdk/openj9/normal/adoptopenjdk`);
             yield io.mkdirP('bootjdk');
             yield exec.exec('ls');
             yield exec.exec(`sudo tar -xzf ${bootjdkJar} -C ./bootjdk --strip=1`);

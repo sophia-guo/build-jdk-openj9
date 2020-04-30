@@ -84,7 +84,7 @@ async function installDependencies(version: string): Promise<void> {
     )
     await io.rmRF(`/var/lib/apt/lists/*`)
     const bootjdkVersion = (parseInt(version) - 1).toString()
-    const bootjdkJar = await tc.downloadTool(`https://api.adoptopenjdk.net/v2/binary/releases/openjdk${bootjdkVersion}?openjdk_impl=openj9&os=linux&arch=x64&release=latest&heap_size=normal&type=jdk`)
+    const bootjdkJar = await tc.downloadTool(`https://api.adoptopenjdk.net/v3/binary/latest/${bootjdkVersion}/ga/linux/x64/jdk/openj9/normal/adoptopenjdk`)
     await io.mkdirP('bootjdk')
     await exec.exec('ls')
     await exec.exec(`sudo tar -xzf ${bootjdkJar} -C ./bootjdk --strip=1`)
