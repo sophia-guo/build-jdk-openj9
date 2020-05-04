@@ -18,12 +18,15 @@ export async function buildJDK(
   process.chdir(`${workDir}`)
   await getSource(openj9Version, usePersonalRepo)
   await exec.exec(`make all`)
-  await printJavaVersion(version)
+  await printJavaVersion(version, openj9Version)
 }
 
 async function installDependencies(version: string): Promise<void> {
   if (`${targetOs}` === 'mac') {
-    await exec.exec('brew install autoconf ccache coreutils bash nasm')
+    await exec.exec('brew install autoconf ccache coreutils bash nasm gnu-tar')
+    core.addPath('/usr/local/opt/gnu-tar/libexec/gnubin')
+    core.info(`path is ${process.env['PATH']}`)
+    exec.exec('tar --version')
   } else {
     await exec.exec('sudo apt-get update')
     await exec.exec(
@@ -109,15 +112,15 @@ async function getBootJdk(version: string): Promise<void> {
     } else {
       bootjdkJar = await tc.downloadTool(`https://api.adoptopenjdk.net/v3/binary/latest/${bootJDKVersion}/ga/${targetOs}/x64/jdk/openj9/normal/adoptopenjdk`)
     }
-    await io.mkdirP('boot')
+    await io.mkdirP('bootjdk')
     if (`${targetOs}` === 'mac') {
-      await exec.exec(`sudo tar -xzf ${bootjdkJar} -C ./boot --strip=3`)
+      await exec.exec(`sudo tar -xzf ${bootjdkJar} -C ./bootjdk --strip=3`)
     } else {
-      await exec.exec(`sudo tar -xzf ${bootjdkJar} -C ./boot --strip=1`)
+      await exec.exec(`sudo tar -xzf ${bootjdkJar} -C ./bootjdk --strip=1`)
     }
     await io.rmRF(`${bootjdkJar}`)
-    core.exportVariable('JAVA_HOME', `${workDir}/boot`)//# Set environment variable JAVA_HOME, and prepend ${JAVA_HOME}/bin to PATH
-    core.addPath(`${workDir}/jdk/bin`)
+    core.exportVariable('JAVA_HOME', `${workDir}/bootjdk`)//# Set environment variable JAVA_HOME, and prepend ${JAVA_HOME}/bin to PATH
+    core.addPath(`${workDir}/bootjdk/bin`)
   }
 }
 
@@ -163,7 +166,7 @@ async function getSource(
   await exec.exec(`bash configure --with-freemarker-jar=${workDir}/freemarker.jar`)
 }
 
-async function printJavaVersion(version: string): Promise<void> {
+async function printJavaVersion(version: string, openj9Version: string): Promise<void> {
   let platform
   if (`${targetOs}` === 'linux') {
     platform = 'linux'
@@ -176,13 +179,13 @@ async function printJavaVersion(version: string): Promise<void> {
   if (parseInt(version) >= 13) platformRelease = `${platform}-x86_64-server-release`
   let jdkImages
   if (version === '8') {
-    jdkImages = `workspace/build/src/build/${platformRelease}/images/j2sdk-image`
+    jdkImages = `build/${platformRelease}/images/j2sdk-image`
     process.chdir(`${jdkImages}/jre/bin`)
   } else {
-    jdkImages = `workspace/build/src/build/${platformRelease}/images/jdk`
+    jdkImages = `build/${platformRelease}/images/jdk`
     process.chdir(`${jdkImages}/bin`)
   }
   await exec.exec(`./java -version`)
   //set outputs
-  core.setOutput('BuildJDKDir', `${workDir}/${jdkImages}`)
+  core.setOutput('BuildJDKDir', `${workDir}/${openj9Version}/${jdkImages}`)
 }

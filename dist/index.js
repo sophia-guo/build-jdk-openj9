@@ -3187,14 +3187,17 @@ function buildJDK(version, usePersonalRepo) {
         process.chdir(`${workDir}`);
         yield getSource(openj9Version, usePersonalRepo);
         yield exec.exec(`make all`);
-        yield printJavaVersion(version);
+        yield printJavaVersion(version, openj9Version);
     });
 }
 exports.buildJDK = buildJDK;
 function installDependencies(version) {
     return __awaiter(this, void 0, void 0, function* () {
         if (`${targetOs}` === 'mac') {
-            yield exec.exec('brew install autoconf ccache coreutils bash nasm');
+            yield exec.exec('brew install autoconf ccache coreutils bash nasm gnu-tar');
+            core.addPath('/usr/local/opt/gnu-tar/libexec/gnubin');
+            core.info(`path is ${process.env['PATH']}`);
+            exec.exec('tar --version');
         }
         else {
             yield exec.exec('sudo apt-get update');
@@ -3273,16 +3276,16 @@ function getBootJdk(version) {
             else {
                 bootjdkJar = yield tc.downloadTool(`https://api.adoptopenjdk.net/v3/binary/latest/${bootJDKVersion}/ga/${targetOs}/x64/jdk/openj9/normal/adoptopenjdk`);
             }
-            yield io.mkdirP('boot');
+            yield io.mkdirP('bootjdk');
             if (`${targetOs}` === 'mac') {
-                yield exec.exec(`sudo tar -xzf ${bootjdkJar} -C ./boot --strip=3`);
+                yield exec.exec(`sudo tar -xzf ${bootjdkJar} -C ./bootjdk --strip=3`);
             }
             else {
-                yield exec.exec(`sudo tar -xzf ${bootjdkJar} -C ./boot --strip=1`);
+                yield exec.exec(`sudo tar -xzf ${bootjdkJar} -C ./bootjdk --strip=1`);
             }
             yield io.rmRF(`${bootjdkJar}`);
-            core.exportVariable('JAVA_HOME', `${workDir}/boot`); //# Set environment variable JAVA_HOME, and prepend ${JAVA_HOME}/bin to PATH
-            core.addPath(`${workDir}/jdk/bin`);
+            core.exportVariable('JAVA_HOME', `${workDir}/bootjdk`); //# Set environment variable JAVA_HOME, and prepend ${JAVA_HOME}/bin to PATH
+            core.addPath(`${workDir}/bootjdk/bin`);
         }
     });
 }
@@ -3328,7 +3331,7 @@ function getSource(openj9Version, usePersonalRepo) {
         yield exec.exec(`bash configure --with-freemarker-jar=${workDir}/freemarker.jar`);
     });
 }
-function printJavaVersion(version) {
+function printJavaVersion(version, openj9Version) {
     return __awaiter(this, void 0, void 0, function* () {
         let platform;
         if (`${targetOs}` === 'linux') {
@@ -3345,16 +3348,16 @@ function printJavaVersion(version) {
             platformRelease = `${platform}-x86_64-server-release`;
         let jdkImages;
         if (version === '8') {
-            jdkImages = `workspace/build/src/build/${platformRelease}/images/j2sdk-image`;
+            jdkImages = `build/${platformRelease}/images/j2sdk-image`;
             process.chdir(`${jdkImages}/jre/bin`);
         }
         else {
-            jdkImages = `workspace/build/src/build/${platformRelease}/images/jdk`;
+            jdkImages = `build/${platformRelease}/images/jdk`;
             process.chdir(`${jdkImages}/bin`);
         }
         yield exec.exec(`./java -version`);
         //set outputs
-        core.setOutput('BuildJDKDir', `${workDir}/${jdkImages}`);
+        core.setOutput('BuildJDKDir', `${workDir}/${openj9Version}/${jdkImages}`);
     });
 }
 
