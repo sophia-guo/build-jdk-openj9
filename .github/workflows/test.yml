@@ -1,7 +1,9 @@
 name: "build-jdk-openj9"
 on: # rebuild any PRs and main branch changes
-  pull_request:
+  # pull_request:
   push:
+    branches-ignore:
+      - '**'
 
 jobs:
   build:
