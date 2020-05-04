@@ -10,7 +10,7 @@ inputs:
     required: false
     default: false
 outputs:
-  BuildOpenJ9JDK: # build jdk images directory
+  BuildJDKDir: # build jdk images directory
 runs:
   using: 'node12'
   main: 'dist/index.js'

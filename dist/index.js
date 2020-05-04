@@ -3176,101 +3176,117 @@ const core = __importStar(__webpack_require__(470));
 const tc = __importStar(__webpack_require__(533));
 const io = __importStar(__webpack_require__(1));
 const workDir = process.env['GITHUB_WORKSPACE'];
+const IS_WINDOWS = process.platform === "win32";
+const targetOs = IS_WINDOWS ? 'windows' : process.platform === 'darwin' ? 'mac' : 'linux';
 function buildJDK(version, usePersonalRepo) {
     return __awaiter(this, void 0, void 0, function* () {
         const openj9Version = `openj9-openjdk-jdk${version}`;
         yield installDependencies(version);
         process.chdir(`${workDir}`);
+        yield getBootJdk(version);
+        process.chdir(`${workDir}`);
         yield getSource(openj9Version, usePersonalRepo);
         yield exec.exec(`make all`);
-        let platform = 'linux-x86_64-normal-server-release';
-        if (version === '14')
-            platform = 'linux-x86_64-server-release'; // TODO: this looks like a error in the README of Eclipse Openj9
-        let jdkImages;
-        if (version === '8') {
-            jdkImages = `build/${platform}/images/j2sdk-image`;
-            process.chdir(`${jdkImages}/jre/bin`);
-        }
-        else {
-            jdkImages = `build/${platform}/images/jdk`;
-            process.chdir(`${jdkImages}/bin`);
-        }
-        yield exec.exec(`./java -version`);
-        core.setOutput('BuildOpenJ9JDK', `${workDir}/${openj9Version}/${jdkImages}`);
+        yield printJavaVersion(version, openj9Version);
     });
 }
 exports.buildJDK = buildJDK;
 function installDependencies(version) {
     return __awaiter(this, void 0, void 0, function* () {
-        yield exec.exec('sudo apt-get update');
-        yield exec.exec('sudo apt-get install -qq -y --no-install-recommends \
-    software-properties-common \
-    python-software-properties');
-        //Note gcc-multilib is needed on github environment
-        yield exec.exec(`sudo apt-get update`);
-        yield exec.exec('sudo apt-get install -qq -y --no-install-recommends \
-    autoconf \
-    ca-certificates \
-    ccache \
-    cmake \
-    cpio \
-    file \
-    git \
-    git-core \
-    libasound2-dev \
-    libcups2-dev \
-    libdwarf-dev \
-    libelf-dev \
-    libfontconfig1-dev \
-    libfreetype6-dev \
-    libnuma-dev \
-    libx11-dev \
-    libxext-dev \
-    libxrender-dev \
-    libxt-dev \
-    libxtst-dev \
-    make \
-    nasm \
-    pkg-config \
-    realpath \
-    ssh \
-    unzip \
-    wget \
-    gcc-multilib \
-    zip');
-        yield io.rmRF(`/var/lib/apt/lists/*`);
-        if (version === '8') {
-            yield exec.exec('sudo add-apt-repository ppa:openjdk-r/ppa');
-            yield exec.exec(`sudo apt-get update`);
-            yield exec.exec('sudo apt-get install -qq -y --no-install-recommends openjdk-7-jdk');
-            yield io.rmRF(`/var/lib/apt/lists/*`);
+        if (`${targetOs}` === 'mac') {
+            yield exec.exec('brew install autoconf ccache coreutils bash nasm gnu-tar');
+            core.addPath('/usr/local/opt/gnu-tar/libexec/gnubin');
+            core.info(`path is ${process.env['PATH']}`);
+            exec.exec('tar --version');
         }
         else {
+            yield exec.exec('sudo apt-get update');
+            yield exec.exec('sudo apt-get install -qq -y --no-install-recommends \
+      software-properties-common \
+      python-software-properties');
+            //Note gcc-multilib is needed on github environment
             yield exec.exec(`sudo apt-get update`);
-            yield exec.exec('sudo apt-get install -qq -y --no-install-recommends libxrandr-dev');
+            yield exec.exec('sudo apt-get install -qq -y --no-install-recommends \
+      autoconf \
+      ca-certificates \
+      ccache \
+      cmake \
+      cpio \
+      file \
+      git \
+      git-core \
+      libasound2-dev \
+      libcups2-dev \
+      libdwarf-dev \
+      libelf-dev \
+      libfontconfig1-dev \
+      libfreetype6-dev \
+      libnuma-dev \
+      libx11-dev \
+      libxext-dev \
+      libxrender-dev \
+      libxt-dev \
+      libxtst-dev \
+      make \
+      nasm \
+      pkg-config \
+      realpath \
+      ssh \
+      unzip \
+      wget \
+      gcc-multilib \
+      zip');
             yield io.rmRF(`/var/lib/apt/lists/*`);
-            const bootjdkVersion = (parseInt(version) - 1).toString();
-            const bootjdkJar = yield tc.downloadTool(`https://api.adoptopenjdk.net/v3/binary/latest/${bootjdkVersion}/ga/linux/x64/jdk/openj9/normal/adoptopenjdk`);
-            yield io.mkdirP('bootjdk');
-            yield exec.exec('ls');
-            yield exec.exec(`sudo tar -xzf ${bootjdkJar} -C ./bootjdk --strip=1`);
-            yield io.rmRF(`${bootjdkJar}`);
-            core.exportVariable('JAVA_HOME', `${workDir}/bootjdk`); //# Set environment variable JAVA_HOME, and prepend ${JAVA_HOME}/bin to PATH
-            core.addPath(`${workDir}/bootjdk/bin`);
+            if (version === '8') {
+                yield exec.exec('sudo add-apt-repository ppa:openjdk-r/ppa');
+                yield exec.exec(`sudo apt-get update`);
+                yield exec.exec('sudo apt-get install -qq -y --no-install-recommends openjdk-7-jdk');
+                yield io.rmRF(`/var/lib/apt/lists/*`);
+            }
+            else {
+                yield exec.exec(`sudo apt-get update`);
+                yield exec.exec('sudo apt-get install -qq -y --no-install-recommends libxrandr-dev');
+                yield io.rmRF(`/var/lib/apt/lists/*`);
+            }
+            process.chdir('/usr/local');
+            const gccBinary = yield tc.downloadTool(`https://ci.adoptopenjdk.net/userContent/gcc/gcc730+ccache.x86_64.tar.xz`);
+            yield exec.exec(`ls -l ${gccBinary}`);
+            yield exec.exec(`sudo tar -xJ --strip-components=1 -C /usr/local -f ${gccBinary}`);
+            yield io.rmRF(`${gccBinary}`);
+            yield exec.exec(`sudo ln -s /usr/lib/x86_64-linux-gnu /usr/lib64`);
+            yield exec.exec(`sudo ln -s /usr/include/x86_64-linux-gnu/* /usr/local/include`);
+            yield exec.exec(`sudo ln -sf /usr/local/bin/g++-7.3 /usr/bin/g++`);
+            yield exec.exec(`sudo ln -sf /usr/local/bin/gcc-7.3 /usr/bin/gcc`);
         }
-        process.chdir('/usr/local');
-        const gccBinary = yield tc.downloadTool(`https://ci.adoptopenjdk.net/userContent/gcc/gcc730+ccache.x86_64.tar.xz`);
-        yield exec.exec(`ls -l ${gccBinary}`);
-        yield exec.exec(`sudo tar -xJ --strip-components=1 -C /usr/local -f ${gccBinary}`);
-        yield io.rmRF(`${gccBinary}`);
-        yield exec.exec(`sudo ln -s /usr/lib/x86_64-linux-gnu /usr/lib64`);
-        yield exec.exec(`sudo ln -s /usr/include/x86_64-linux-gnu/* /usr/local/include`);
-        yield exec.exec(`sudo ln -sf /usr/local/bin/g++-7.3 /usr/bin/g++`);
-        yield exec.exec(`sudo ln -sf /usr/local/bin/gcc-7.3 /usr/bin/gcc`);
         process.chdir(`${workDir}`);
         const freeMarker = yield tc.downloadTool(`https://sourceforge.net/projects/freemarker/files/freemarker/2.3.8/freemarker-2.3.8.tar.gz/download`);
         yield exec.exec(`sudo tar -xzf ${freeMarker} freemarker-2.3.8/lib/freemarker.jar --strip=2`);
         yield io.rmRF(`${freeMarker}`);
+    });
+}
+function getBootJdk(version) {
+    return __awaiter(this, void 0, void 0, function* () {
+        const bootJDKVersion = (parseInt(version) - 1).toString();
+        if (parseInt(bootJDKVersion) > 8) {
+            let bootjdkJar;
+            // TODO: issue open openj9,mac, 10 ga : https://api.adoptopenjdk.net/v3/binary/latest/10/ga/mac/x64/jdk/openj9/normal/adoptopenjdk doesn't work
+            if (`${bootJDKVersion}` === '10' && `${targetOs}` === 'mac') {
+                bootjdkJar = yield tc.downloadTool(`https://github.com/AdoptOpenJDK/openjdk10-binaries/releases/download/jdk-10.0.2%2B13.1/OpenJDK10U-jdk_x64_mac_hotspot_10.0.2_13.tar.gz`);
+            }
+            else {
+                bootjdkJar = yield tc.downloadTool(`https://api.adoptopenjdk.net/v3/binary/latest/${bootJDKVersion}/ga/${targetOs}/x64/jdk/openj9/normal/adoptopenjdk`);
+            }
+            yield io.mkdirP('bootjdk');
+            if (`${targetOs}` === 'mac') {
+                yield exec.exec(`sudo tar -xzf ${bootjdkJar} -C ./bootjdk --strip=3`);
+            }
+            else {
+                yield exec.exec(`sudo tar -xzf ${bootjdkJar} -C ./bootjdk --strip=1`);
+            }
+            yield io.rmRF(`${bootjdkJar}`);
+            core.exportVariable('JAVA_HOME', `${workDir}/bootjdk`); //# Set environment variable JAVA_HOME, and prepend ${JAVA_HOME}/bin to PATH
+            core.addPath(`${workDir}/bootjdk/bin`);
+        }
     });
 }
 function getSource(openj9Version, usePersonalRepo) {
@@ -3313,6 +3329,35 @@ function getSource(openj9Version, usePersonalRepo) {
         }
         yield exec.exec(`bash ./get_source.sh ${omrParameters} ${openj9Parameters}`);
         yield exec.exec(`bash configure --with-freemarker-jar=${workDir}/freemarker.jar`);
+    });
+}
+function printJavaVersion(version, openj9Version) {
+    return __awaiter(this, void 0, void 0, function* () {
+        let platform;
+        if (`${targetOs}` === 'linux') {
+            platform = 'linux';
+        }
+        else if (`${targetOs}` === 'mac') {
+            platform = 'macosx';
+        }
+        else {
+            platform = 'windows';
+        }
+        let platformRelease = `${platform}-x86_64-normal-server-release`;
+        if (parseInt(version) >= 13)
+            platformRelease = `${platform}-x86_64-server-release`;
+        let jdkImages;
+        if (version === '8') {
+            jdkImages = `build/${platformRelease}/images/j2sdk-image`;
+            process.chdir(`${jdkImages}/jre/bin`);
+        }
+        else {
+            jdkImages = `build/${platformRelease}/images/jdk`;
+            process.chdir(`${jdkImages}/bin`);
+        }
+        yield exec.exec(`./java -version`);
+        //set outputs
+        core.setOutput('BuildJDKDir', `${workDir}/${openj9Version}/${jdkImages}`);
     });
 }
 
