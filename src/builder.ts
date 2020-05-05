@@ -115,12 +115,12 @@ async function getBootJdk(version: string): Promise<void> {
     await io.mkdirP('bootjdk')
     if (`${targetOs}` === 'mac') {
       await exec.exec(`sudo tar -xzf ${bootjdkJar} -C ./bootjdk --strip=3`)
+    } else if (`${bootJDKVersion}` === '10' && `${targetOs}` === 'linux') {
+      await exec.exec(`sudo tar -xzf ${bootjdkJar} -C ./bootjdk --strip=2`) // TODO : issue open as this is packaged differently
     } else {
       await exec.exec(`sudo tar -xzf ${bootjdkJar} -C ./bootjdk --strip=1`)
     }
     await io.rmRF(`${bootjdkJar}`)
-    core.exportVariable('JAVA_HOME', `${workDir}/bootjdk`)//# Set environment variable JAVA_HOME, and prepend ${JAVA_HOME}/bin to PATH
-    core.addPath(`${workDir}/bootjdk/bin`)
   }
 }
 
@@ -163,7 +163,7 @@ async function getSource(
     openj9Parameters = `-openj9-repo=https://github.com/${openj9Repo}.git -openj9-branch=${openj9Branch}`
   }
   await exec.exec(`bash ./get_source.sh ${omrParameters} ${openj9Parameters}`)
-  await exec.exec(`bash configure --with-freemarker-jar=${workDir}/freemarker.jar`)
+  await exec.exec(`bash configure --with-freemarker-jar=${workDir}/freemarker.jar --with-boot-jdk=${workDir}/bootjdk`)
 }
 
 async function printJavaVersion(version: string, openj9Version: string): Promise<void> {
