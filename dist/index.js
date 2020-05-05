@@ -3284,8 +3284,8 @@ function getBootJdk(version) {
                 yield exec.exec(`sudo tar -xzf ${bootjdkJar} -C ./bootjdk --strip=1`);
             }
             yield io.rmRF(`${bootjdkJar}`);
-            core.exportVariable('JAVA_HOME', `${workDir}/bootjdk`); //# Set environment variable JAVA_HOME, and prepend ${JAVA_HOME}/bin to PATH
-            core.addPath(`${workDir}/bootjdk/bin`);
+            // core.exportVariable('JAVA_HOME', `${workDir}/bootjdk`)//# Set environment variable JAVA_HOME, and prepend ${JAVA_HOME}/bin to PATH
+            //  core.addPath(`${workDir}/bootjdk/bin`)
         }
     });
 }
@@ -3328,7 +3328,7 @@ function getSource(openj9Version, usePersonalRepo) {
             openj9Parameters = `-openj9-repo=https://github.com/${openj9Repo}.git -openj9-branch=${openj9Branch}`;
         }
         yield exec.exec(`bash ./get_source.sh ${omrParameters} ${openj9Parameters}`);
-        yield exec.exec(`bash configure --with-freemarker-jar=${workDir}/freemarker.jar`);
+        yield exec.exec(`bash configure --with-freemarker-jar=${workDir}/freemarker.jar --with-boot-jdk=${workDir}/bootjdk`);
     });
 }
 function printJavaVersion(version, openj9Version) {
