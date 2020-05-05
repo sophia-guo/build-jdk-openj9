@@ -3270,14 +3270,8 @@ function getBootJdk(version) {
         if (parseInt(bootJDKVersion) > 8) {
             let bootjdkJar;
             // TODO: issue open openj9,mac, 10 ga : https://api.adoptopenjdk.net/v3/binary/latest/10/ga/mac/x64/jdk/openj9/normal/adoptopenjdk doesn't work
-            // TODO: issue, openj9 linux jdk10 can not be the bootjdk for 11? 
-            if (`${bootJDKVersion}` === '10') {
-                if (`${targetOs}` === 'mac') {
-                    bootjdkJar = yield tc.downloadTool(`https://github.com/AdoptOpenJDK/openjdk10-binaries/releases/download/jdk-10.0.2%2B13.1/OpenJDK10U-jdk_x64_mac_hotspot_10.0.2_13.tar.gz`);
-                }
-                else {
-                    bootjdkJar = yield tc.downloadTool(`https://api.adoptopenjdk.net/v3/binary/latest/10/ga/${targetOs}/x64/jdk/openj9/normal/adoptopenjdk`);
-                }
+            if (`${bootJDKVersion}` === '10' && `${targetOs}` === 'mac') {
+                bootjdkJar = yield tc.downloadTool(`https://github.com/AdoptOpenJDK/openjdk10-binaries/releases/download/jdk-10.0.2%2B13.1/OpenJDK10U-jdk_x64_mac_hotspot_10.0.2_13.tar.gz`);
             }
             else {
                 bootjdkJar = yield tc.downloadTool(`https://api.adoptopenjdk.net/v3/binary/latest/${bootJDKVersion}/ga/${targetOs}/x64/jdk/openj9/normal/adoptopenjdk`);
@@ -3286,18 +3280,13 @@ function getBootJdk(version) {
             if (`${targetOs}` === 'mac') {
                 yield exec.exec(`sudo tar -xzf ${bootjdkJar} -C ./bootjdk --strip=3`);
             }
+            else if (`${bootJDKVersion}` === '10' && `${targetOs}` === 'linux') {
+                yield exec.exec(`sudo tar -xzf ${bootjdkJar} -C ./bootjdk --strip=2`); // TODO : issue open as this is packaged differently
+            }
             else {
                 yield exec.exec(`sudo tar -xzf ${bootjdkJar} -C ./bootjdk --strip=1`);
-                yield exec.exec(`ls`);
-                process.chdir('bootjdk');
-                yield exec.exec(`ls`);
-                process.chdir('bin');
-                yield exec.exec(`ls`);
-                yield exec.exec(`${workDir}/bootjdk/bin/java -version`);
             }
             yield io.rmRF(`${bootjdkJar}`);
-            // core.exportVariable('JAVA_HOME', `${workDir}/bootjdk`)//# Set environment variable JAVA_HOME, and prepend ${JAVA_HOME}/bin to PATH
-            //  core.addPath(`${workDir}/bootjdk/bin`)
         }
     });
 }
