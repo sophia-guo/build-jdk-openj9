@@ -119,7 +119,7 @@ async function getBootJdk(version: string): Promise<void> {
       await exec.exec(`sudo tar -xzf ${bootjdkJar} -C ./bootjdk --strip=3`)
     } else {
       await exec.exec(`sudo tar -xzf ${bootjdkJar} -C ./bootjdk --strip=1`)
-      await exec.exec(`${workDir}/bootjkd/bin/java -version`)
+      await exec.exec(`${workDir}/bootjdk/bin/java -version`)
     }
     await io.rmRF(`${bootjdkJar}`)
   // core.exportVariable('JAVA_HOME', `${workDir}/bootjdk`)//# Set environment variable JAVA_HOME, and prepend ${JAVA_HOME}/bin to PATH

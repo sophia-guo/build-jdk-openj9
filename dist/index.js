@@ -3284,7 +3284,7 @@ function getBootJdk(version) {
             }
             else {
                 yield exec.exec(`sudo tar -xzf ${bootjdkJar} -C ./bootjdk --strip=1`);
-                yield exec.exec(`${workDir}/bootjkd/bin/java -version`);
+                yield exec.exec(`${workDir}/bootjdk/bin/java -version`);
             }
             yield io.rmRF(`${bootjdkJar}`);
             // core.exportVariable('JAVA_HOME', `${workDir}/bootjdk`)//# Set environment variable JAVA_HOME, and prepend ${JAVA_HOME}/bin to PATH
