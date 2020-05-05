@@ -16,7 +16,7 @@ export async function buildJDK(
   process.chdir(`${workDir}`)
   await getBootJdk(version)
   process.chdir(`${workDir}`)
-  await getSource(openj9Version, usePersonalRepo)
+  await getSource(openj9Version, usePersonalRepo, version)
   await exec.exec(`make all`)
   await printJavaVersion(version, openj9Version)
 }
@@ -102,6 +102,7 @@ async function installDependencies(version: string): Promise<void> {
   await io.rmRF(`${freeMarker}`)
 }
 
+//TODO: could be only call when default environment javahome doesn't work.
 async function getBootJdk(version: string): Promise<void> {
   const bootJDKVersion = (parseInt(version) - 1).toString()
   if (parseInt(bootJDKVersion) > 8) {
@@ -126,7 +127,8 @@ async function getBootJdk(version: string): Promise<void> {
 
 async function getSource(
   openj9Version: string,
-  usePersonalRepo: boolean
+  usePersonalRepo: boolean,
+  version: string
 ): Promise<void> {
   let openjdkOpenj9Repo = `ibmruntimes/${openj9Version}`
   let openjdkOpenj9Branch = 'openj9'
@@ -163,7 +165,11 @@ async function getSource(
     openj9Parameters = `-openj9-repo=https://github.com/${openj9Repo}.git -openj9-branch=${openj9Branch}`
   }
   await exec.exec(`bash ./get_source.sh ${omrParameters} ${openj9Parameters}`)
-  await exec.exec(`bash configure --with-freemarker-jar=${workDir}/freemarker.jar --with-boot-jdk=${workDir}/bootjdk`)
+
+  //Using default javahome for jdk8. TODO: only use specified bootjdk when necessary
+  let bootjdkConfigure = ''
+  if (parseInt(version) > 8)  bootjdkConfigure = `--with-boot-jdk=${workDir}/bootjdk`
+  await exec.exec(`bash configure --with-freemarker-jar=${workDir}/freemarker.jar ${bootjdkConfigure}`)
 }
 
 async function printJavaVersion(version: string, openj9Version: string): Promise<void> {
