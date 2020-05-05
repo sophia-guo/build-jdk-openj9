@@ -3185,7 +3185,7 @@ function buildJDK(version, usePersonalRepo) {
         process.chdir(`${workDir}`);
         yield getBootJdk(version);
         process.chdir(`${workDir}`);
-        yield getSource(openj9Version, usePersonalRepo);
+        yield getSource(openj9Version, usePersonalRepo, version);
         yield exec.exec(`make all`);
         yield printJavaVersion(version, openj9Version);
     });
@@ -3264,6 +3264,7 @@ function installDependencies(version) {
         yield io.rmRF(`${freeMarker}`);
     });
 }
+//TODO: could be only call when default environment javahome doesn't work.
 function getBootJdk(version) {
     return __awaiter(this, void 0, void 0, function* () {
         const bootJDKVersion = (parseInt(version) - 1).toString();
@@ -3290,7 +3291,7 @@ function getBootJdk(version) {
         }
     });
 }
-function getSource(openj9Version, usePersonalRepo) {
+function getSource(openj9Version, usePersonalRepo, version) {
     return __awaiter(this, void 0, void 0, function* () {
         let openjdkOpenj9Repo = `ibmruntimes/${openj9Version}`;
         let openjdkOpenj9Branch = 'openj9';
@@ -3329,7 +3330,11 @@ function getSource(openj9Version, usePersonalRepo) {
             openj9Parameters = `-openj9-repo=https://github.com/${openj9Repo}.git -openj9-branch=${openj9Branch}`;
         }
         yield exec.exec(`bash ./get_source.sh ${omrParameters} ${openj9Parameters}`);
-        yield exec.exec(`bash configure --with-freemarker-jar=${workDir}/freemarker.jar --with-boot-jdk=${workDir}/bootjdk`);
+        //Using default javahome for jdk8. TODO: only use specified bootjdk when necessary
+        let bootjdkConfigure = '';
+        if (parseInt(version) > 8)
+            bootjdkConfigure = `--with-boot-jdk=${workDir}/bootjdk`;
+        yield exec.exec(`bash configure --with-freemarker-jar=${workDir}/freemarker.jar ${bootjdkConfigure}`);
     });
 }
 function printJavaVersion(version, openj9Version) {
