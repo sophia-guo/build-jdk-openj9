@@ -3301,8 +3301,14 @@ function getSource(openj9Version, usePersonalRepo, version) {
         let openj9Branch = '';
         if (usePersonalRepo) {
             const repo = process.env.GITHUB_REPOSITORY;
-            const ref = process.env.GITHUB_REF;
-            const branch = ref.substr(ref.lastIndexOf('/') + 1);
+            let branch = '';
+            if ('GITHUB_HEAD_REF' in process.env) {
+                branch = process.env.GITHUB_HEAD_REF;
+            }
+            else {
+                const ref = process.env.GITHUB_REF;
+                branch = ref.substr(ref.lastIndexOf('/') + 1);
+            }
             if (repo.includes(`/${openj9Version}`)) {
                 openjdkOpenj9Repo = repo;
                 openjdkOpenj9Branch = branch;
