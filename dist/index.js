@@ -3185,7 +3185,8 @@ function buildJDK(version, usePersonalRepo) {
         process.chdir(`${workDir}`);
         yield getBootJdk(version);
         process.chdir(`${workDir}`);
-        yield getSource(openj9Version, usePersonalRepo, version);
+        yield getSource(openj9Version, usePersonalRepo);
+        yield setConfigure(version, openj9Version);
         yield exec.exec(`make all`);
         yield printJavaVersion(version, openj9Version);
     });
@@ -3248,6 +3249,9 @@ function installDependencies(version) {
                 yield exec.exec('sudo apt-get install -qq -y --no-install-recommends libxrandr-dev');
                 yield io.rmRF(`/var/lib/apt/lists/*`);
             }
+            const cuda9 = yield tc.downloadTool('https://developer.nvidia.com/compute/cuda/9.0/Prod/local_installers/cuda_9.0.176_384.81_linux-run');
+            yield exec.exec(`sudo sh ${cuda9} --silent --toolkit --override`);
+            yield io.rmRF(`${cuda9}`);
             process.chdir('/usr/local');
             const gccBinary = yield tc.downloadTool(`https://ci.adoptopenjdk.net/userContent/gcc/gcc730+ccache.x86_64.tar.xz`);
             yield exec.exec(`ls -l ${gccBinary}`);
@@ -3291,7 +3295,7 @@ function getBootJdk(version) {
         }
     });
 }
-function getSource(openj9Version, usePersonalRepo, version) {
+function getSource(openj9Version, usePersonalRepo) {
     return __awaiter(this, void 0, void 0, function* () {
         let openjdkOpenj9Repo = `ibmruntimes/${openj9Version}`;
         let openjdkOpenj9Branch = 'openj9';
@@ -3337,10 +3341,33 @@ function getSource(openj9Version, usePersonalRepo, version) {
         }
         yield exec.exec(`bash ./get_source.sh ${omrParameters} ${openj9Parameters}`);
         //Using default javahome for jdk8. TODO: only use specified bootjdk when necessary
+        /*   let bootjdkConfigure = ''
+          if (parseInt(version) > 8)  bootjdkConfigure = `--with-boot-jdk=${workDir}/bootjdk`
+          await exec.exec(`bash configure --with-freemarker-jar=${workDir}/freemarker.jar ${bootjdkConfigure}`) */
+    });
+}
+function setConfigure(version, openj9Version) {
+    return __awaiter(this, void 0, void 0, function* () {
         let bootjdkConfigure = '';
         if (parseInt(version) > 8)
             bootjdkConfigure = `--with-boot-jdk=${workDir}/bootjdk`;
-        yield exec.exec(`bash configure --with-freemarker-jar=${workDir}/freemarker.jar ${bootjdkConfigure}`);
+        let configureArgs;
+        if (`${targetOs}` === 'linux') {
+            configureArgs = '--enable-jitserver --openssl-version=1.1.1g --with-openssl=fetched --enable-cuda --with-cuda=/usr/local/cuda-9.0';
+            if (`${version}` === '8') {
+                configureArgs += ' --disable-zip-debug-info';
+            }
+        }
+        if (`${targetOs}` === 'mac') {
+            configureArgs = '--openssl-version=1.1.1g --with-openssl=fetched --enable-openssl-bundling';
+            if (`${version}` === '8') {
+                configureArgs += ' --with-xcode-path=.../Xcode4/Xcode.app --with-openj9-cc=.../clang --with-openj9-cxx=.../clang++ --with-openj9-developer-dir=.../Developer MACOSX_DEPLOYMENT_TARGET=10.9.0 SDKPATH=.../MacOSX10.8.sdk';
+            }
+        }
+        if (IS_WINDOWS) {
+            //TODO
+        }
+        yield exec.exec(`bash configure --with-freemarker-jar=${workDir}/freemarker.jar ${bootjdkConfigure} ${configureArgs}`);
     });
 }
 function printJavaVersion(version, openj9Version) {
