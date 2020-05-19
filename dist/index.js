@@ -3339,7 +3339,7 @@ function getSource(openj9Version, usePersonalRepo) {
         if (openj9Repo.length !== 0) {
             openj9Parameters = `-openj9-repo=https://github.com/${openj9Repo}.git -openj9-branch=${openj9Branch}`;
         }
-        yield exec.exec(`bash ./get_source.sh ${omrParameters} ${openj9Parameters}`);
+        yield exec.exec(`bash ./get_source.sh ${omrParameters} ${openj9Parameters} --openssl-version=1.1.1g`);
         //Using default javahome for jdk8. TODO: only use specified bootjdk when necessary
         /*   let bootjdkConfigure = ''
           if (parseInt(version) > 8)  bootjdkConfigure = `--with-boot-jdk=${workDir}/bootjdk`
@@ -3353,13 +3353,13 @@ function setConfigure(version, openj9Version) {
             bootjdkConfigure = `--with-boot-jdk=${workDir}/bootjdk`;
         let configureArgs;
         if (`${targetOs}` === 'linux') {
-            configureArgs = '--enable-jitserver --openssl-version=1.1.1g --with-openssl=fetched --enable-cuda --with-cuda=/usr/local/cuda-9.0';
+            configureArgs = '--enable-jitserver  --with-openssl=fetched --enable-cuda --with-cuda=/usr/local/cuda-9.0';
             if (`${version}` === '8') {
                 configureArgs += ' --disable-zip-debug-info';
             }
         }
         if (`${targetOs}` === 'mac') {
-            configureArgs = '--openssl-version=1.1.1g --with-openssl=fetched --enable-openssl-bundling';
+            configureArgs = '--with-openssl=fetched --enable-openssl-bundling';
             if (`${version}` === '8') {
                 configureArgs += ' --with-xcode-path=.../Xcode4/Xcode.app --with-openj9-cc=.../clang --with-openj9-cxx=.../clang++ --with-openj9-developer-dir=.../Developer MACOSX_DEPLOYMENT_TARGET=10.9.0 SDKPATH=.../MacOSX10.8.sdk';
             }
