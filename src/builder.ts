@@ -16,7 +16,8 @@ export async function buildJDK(
   process.chdir(`${workDir}`)
   await getBootJdk(version)
   process.chdir(`${workDir}`)
-  await getSource(openj9Version, usePersonalRepo, version)
+  await getSource(openj9Version, usePersonalRepo)
+  await setConfigure(version, openj9Version)
   await exec.exec(`make all`)
   await printJavaVersion(version, openj9Version)
 }
@@ -84,7 +85,10 @@ async function installDependencies(version: string): Promise<void> {
       )
       await io.rmRF(`/var/lib/apt/lists/*`)
     }
-
+    
+    const cuda9 = await tc.downloadTool('https://developer.nvidia.com/compute/cuda/9.0/Prod/local_installers/cuda_9.0.176_384.81_linux-run')
+    await exec.exec(`sudo sh ${cuda9} --silent --toolkit --override`)
+    await io.rmRF(`${cuda9}`)
     process.chdir('/usr/local')
     const gccBinary = await tc.downloadTool(`https://ci.adoptopenjdk.net/userContent/gcc/gcc730+ccache.x86_64.tar.xz`)
     await exec.exec(`ls -l ${gccBinary}`)
@@ -127,8 +131,7 @@ async function getBootJdk(version: string): Promise<void> {
 
 async function getSource(
   openj9Version: string,
-  usePersonalRepo: boolean,
-  version: string
+  usePersonalRepo: boolean
 ): Promise<void> {
   let openjdkOpenj9Repo = `ibmruntimes/${openj9Version}`
   let openjdkOpenj9Branch = 'openj9'
@@ -170,14 +173,38 @@ async function getSource(
   if (openj9Repo.length !== 0) {
     openj9Parameters = `-openj9-repo=https://github.com/${openj9Repo}.git -openj9-branch=${openj9Branch}`
   }
-  await exec.exec(`bash ./get_source.sh ${omrParameters} ${openj9Parameters}`)
+  await exec.exec(`bash ./get_source.sh ${omrParameters} ${openj9Parameters} --openssl-version=1.1.1g`)
 
   //Using default javahome for jdk8. TODO: only use specified bootjdk when necessary
-  let bootjdkConfigure = ''
+/*   let bootjdkConfigure = ''
   if (parseInt(version) > 8)  bootjdkConfigure = `--with-boot-jdk=${workDir}/bootjdk`
-  await exec.exec(`bash configure --with-freemarker-jar=${workDir}/freemarker.jar ${bootjdkConfigure}`)
+  await exec.exec(`bash configure --with-freemarker-jar=${workDir}/freemarker.jar ${bootjdkConfigure}`) */
 }
 
+async function setConfigure(version: string, openj9Version: string): Promise<void> {
+  let bootjdkConfigure = ''
+  if (parseInt(version) > 8)  bootjdkConfigure = `--with-boot-jdk=${workDir}/bootjdk`
+  let configureArgs
+  if (`${targetOs}` === 'linux') {
+    configureArgs = '--enable-jitserver  --with-openssl=fetched --enable-cuda --with-cuda=/usr/local/cuda-9.0'
+    if (`${version}` === '8') {
+      configureArgs += ' --disable-zip-debug-info'
+    }
+  }
+
+  if (`${targetOs}` === 'mac') {
+    configureArgs = '--with-openssl=fetched --enable-openssl-bundling'
+    if (`${version}` === '8') {
+      configureArgs += ' --with-xcode-path=.../Xcode4/Xcode.app --with-openj9-cc=.../clang --with-openj9-cxx=.../clang++ --with-openj9-developer-dir=.../Developer MACOSX_DEPLOYMENT_TARGET=10.9.0 SDKPATH=.../MacOSX10.8.sdk'
+    }
+  }
+
+  if (IS_WINDOWS) {
+    //TODO
+  }
+
+  await exec.exec(`bash configure --with-freemarker-jar=${workDir}/freemarker.jar ${bootjdkConfigure} ${configureArgs}`)
+}
 async function printJavaVersion(version: string, openj9Version: string): Promise<void> {
   let platform
   if (`${targetOs}` === 'linux') {
