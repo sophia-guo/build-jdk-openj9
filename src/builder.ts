@@ -195,7 +195,12 @@ async function setConfigure(version: string, openj9Version: string): Promise<voi
   if (`${targetOs}` === 'mac') {
     configureArgs = '--with-openssl=fetched --enable-openssl-bundling'
     if (`${version}` === '8') {
-      configureArgs += ' --with-xcode-path=.../Xcode4/Xcode.app --with-openj9-cc=.../clang --with-openj9-cxx=.../clang++ --with-openj9-developer-dir=.../Developer MACOSX_DEPLOYMENT_TARGET=10.9.0 SDKPATH=.../MacOSX10.8.sdk'
+      core.error(
+        'JDK8 for Mac needs to build on a older OS version 10.11, macos-10.15 can not work for jdk8. please double check the jdkversion and os!'
+      )
+      // TODO: JDK8 for Mac needs to build on a older OS version 10.11, if older version is available the following ... should be replaced with a full path.
+      // Also note MACOSX_DEPLOYMENT_TARGET and SDKPATH are environment variables, not configure options.
+      // configureArgs += ' --with-xcode-path=.../Xcode4/Xcode.app --with-openj9-cc=.../clang --with-openj9-cxx=.../clang++ --with-openj9-developer-dir=.../Developer MACOSX_DEPLOYMENT_TARGET=10.9.0 SDKPATH=.../MacOSX10.8.sdk'
     }
   }
 
