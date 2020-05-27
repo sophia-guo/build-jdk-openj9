@@ -199,6 +199,12 @@ async function installWindowsDepends(version: string): Promise<void> {
   await io.rmRF('C:\\temp\\OpenSSL-1.1.1g.tar.gz')
   await io.rmRF(`C:\\temp\\OpenSSL-1.1.1g`)
 
+  if (version === '8') {
+    core.setFailed('JDK8 for Windows is not available for now!')
+    // TODO: install version 8 specific dependencies
+    // https://github.com/eclipse/openj9/blob/master/doc/build-instructions/Build_Instructions_V8.md#windows
+  }
+
 }
 //TODO: could be only call when default environment javahome doesn't work.
 async function getBootJdk(version: string): Promise<void> {
@@ -312,6 +318,7 @@ async function setConfigure(version: string, openj9Version: string): Promise<voi
   if (IS_WINDOWS) {
     configureArgs = '--with-openssl="c:/OpenSSL-1.1.1g-x86_64-VS2017" --enable-openssl-bundling --enable-cuda -with-cuda="C:/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v9.0"'
     if (`${version}` === '8') {
+      //TODO 
       configureArgs += '--disable-zip-debug-info --with-freetype-include=.../freetype-2.5.3/include --with-freetype-lib=.../freetype-2.5.3/lib64'
     }
     //TODO
