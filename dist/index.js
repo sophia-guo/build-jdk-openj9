@@ -3212,7 +3212,6 @@ function buildJDK(version, usePersonalRepo) {
 exports.buildJDK = buildJDK;
 function installDependencies(version) {
     return __awaiter(this, void 0, void 0, function* () {
-        yield installCommons();
         if (`${targetOs}` === 'mac') {
             yield installMacDepends();
         }
@@ -3222,6 +3221,7 @@ function installDependencies(version) {
         else {
             yield installWindowsDepends(version);
         }
+        yield installCommons();
     });
 }
 function installCommons() {
@@ -3347,6 +3347,11 @@ function installWindowsDepends(version) {
         childProcess.execSync(`.\\vcvarsall.bat AMD64 && cd C:\\temp\\OpenSSL-1.1.1g && perl C:\\temp\\OpenSSL-1.1.1g\\Configure VC-WIN64A --prefix=C:\\OpenSSL-1.1.1g-x86_64-VS2017 && nmake.exe install > C:\\temp\\openssl64-VS2017.log && nmake.exe -f makefile clean`);
         yield io.rmRF('C:\\temp\\OpenSSL-1.1.1g.tar.gz');
         yield io.rmRF(`C:\\temp\\OpenSSL-1.1.1g`);
+        if (version === '8') {
+            core.setFailed('JDK8 for Windows is not available for now!');
+            // TODO: install version 8 specific dependencies
+            // https://github.com/eclipse/openj9/blob/master/doc/build-instructions/Build_Instructions_V8.md#windows
+        }
     });
 }
 //TODO: could be only call when default environment javahome doesn't work.
@@ -3464,6 +3469,7 @@ function setConfigure(version, openj9Version) {
         if (IS_WINDOWS) {
             configureArgs = '--with-openssl="c:/OpenSSL-1.1.1g-x86_64-VS2017" --enable-openssl-bundling --enable-cuda -with-cuda="C:/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v9.0"';
             if (`${version}` === '8') {
+                //TODO 
                 configureArgs += '--disable-zip-debug-info --with-freetype-include=.../freetype-2.5.3/include --with-freetype-lib=.../freetype-2.5.3/lib64';
             }
             //TODO
