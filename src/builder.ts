@@ -2,6 +2,7 @@ import * as exec from '@actions/exec'
 import * as core from '@actions/core'
 import * as tc from '@actions/tool-cache'
 import * as io from '@actions/io'
+import {ExecOptions} from '@actions/exec/lib/interfaces'
 
 const workDir = process.env['GITHUB_WORKSPACE']
 const IS_WINDOWS = process.platform === "win32"
@@ -29,12 +30,22 @@ async function installDependencies(version: string): Promise<void> {
     core.info(`path is ${process.env['PATH']}`)
     exec.exec('tar --version')
   } else {
-    await exec.exec('sudo apt-get update')
-    await exec.exec(
-      'sudo apt-get install -qq -y --no-install-recommends \
-      software-properties-common \
-      python-software-properties'
-    )
+    const ubuntuVersion = await getOsVersion()
+    if (`${ubuntuVersion}` === '16.04') {
+      await exec.exec('sudo apt-get update')
+      await exec.exec(
+        'sudo apt-get install -qq -y --no-install-recommends \
+        software-properties-common \
+        python-software-properties \
+        realpath'
+      )
+    } else {
+      await exec.exec('sudo apt-get update')
+      await exec.exec(
+        'sudo apt-get install -qq -y --no-install-recommends \
+        software-properties-common'
+      )
+    }
     //Note gcc-multilib is needed on github environment
     await exec.exec(`sudo apt-get update`)
     await exec.exec(
@@ -62,7 +73,6 @@ async function installDependencies(version: string): Promise<void> {
       make \
       nasm \
       pkg-config \
-      realpath \
       ssh \
       unzip \
       wget \
@@ -210,6 +220,7 @@ async function setConfigure(version: string, openj9Version: string): Promise<voi
 
   await exec.exec(`bash configure --with-freemarker-jar=${workDir}/freemarker.jar ${bootjdkConfigure} ${configureArgs}`)
 }
+
 async function printJavaVersion(version: string, openj9Version: string): Promise<void> {
   let platform
   if (`${targetOs}` === 'linux') {
@@ -232,4 +243,29 @@ async function printJavaVersion(version: string, openj9Version: string): Promise
   await exec.exec(`./java -version`)
   //set outputs
   core.setOutput('BuildJDKDir', `${workDir}/${openj9Version}/${jdkImages}`)
+}
+
+async function getOsVersion(): Promise<string> {
+  let osVersion = ''
+  const options: ExecOptions = {}
+  let myOutput = ''
+  options.listeners = {
+    stdout: (data: Buffer) => {
+      myOutput += data.toString()
+    }
+  }
+
+  if (IS_WINDOWS) {
+    //TODO
+  } else if (`${targetOs}` === 'mac') {
+    //TODO
+  } else {
+    exec.exec(`lsb_release`, ['-r', '-s'], options)
+    if (myOutput.includes('16.04')) {
+      osVersion = '16.04'
+    } else {
+      osVersion = '18.04'
+    }
+  }
+  return osVersion
 }
