@@ -3201,10 +3201,19 @@ function installDependencies(version) {
             exec.exec('tar --version');
         }
         else {
-            yield exec.exec('sudo apt-get update');
-            yield exec.exec('sudo apt-get install -qq -y --no-install-recommends \
-      software-properties-common \
-      python-software-properties');
+            const ubuntuVersion = yield getOsVersion();
+            if (`${ubuntuVersion}` === '16.04') {
+                yield exec.exec('sudo apt-get update');
+                yield exec.exec('sudo apt-get install -qq -y --no-install-recommends \
+        software-properties-common \
+        python-software-properties \
+        realpath');
+            }
+            else {
+                yield exec.exec('sudo apt-get update');
+                yield exec.exec('sudo apt-get install -qq -y --no-install-recommends \
+        software-properties-common');
+            }
             //Note gcc-multilib is needed on github environment
             yield exec.exec(`sudo apt-get update`);
             yield exec.exec('sudo apt-get install -qq -y --no-install-recommends \
@@ -3231,7 +3240,6 @@ function installDependencies(version) {
       make \
       nasm \
       pkg-config \
-      realpath \
       ssh \
       unzip \
       wget \
@@ -3400,6 +3408,34 @@ function printJavaVersion(version, openj9Version) {
         yield exec.exec(`./java -version`);
         //set outputs
         core.setOutput('BuildJDKDir', `${workDir}/${openj9Version}/${jdkImages}`);
+    });
+}
+function getOsVersion() {
+    return __awaiter(this, void 0, void 0, function* () {
+        let osVersion = '';
+        const options = {};
+        let myOutput = '';
+        options.listeners = {
+            stdout: (data) => {
+                myOutput += data.toString();
+            }
+        };
+        if (IS_WINDOWS) {
+            //TODO
+        }
+        else if (`${targetOs}` === 'mac') {
+            //TODO
+        }
+        else {
+            exec.exec(`lsb_release`, ['-r', '-s'], options);
+            if (myOutput.includes('16.04')) {
+                osVersion = '16.04';
+            }
+            else {
+                osVersion = '18.04';
+            }
+        }
+        return osVersion;
     });
 }
 
