@@ -53,6 +53,7 @@ async function installDependencies(version: string): Promise<void> {
 
 async function installCommons(): Promise<void> {
   if (!IS_WINDOWS) {
+    process.chdir(`${workDir}`)
     const freeMarker = await tc.downloadTool(`https://sourceforge.net/projects/freemarker/files/freemarker/2.3.8/freemarker-2.3.8.tar.gz/download`)
     await exec.exec(`sudo tar -xzf ${freeMarker} freemarker-2.3.8/lib/freemarker.jar --strip=2`)
     await io.rmRF(`${freeMarker}`)
@@ -186,8 +187,8 @@ async function installWindowsDepends(version: string): Promise<void> {
   await io.rmRF(`C:\\temp\\cuda_9.0.176_win10_network-exe.exe`)
   
   //register necessary libraries
-  await exec.exec(`regsvr32 "C:\\Program Files (x86)\\Microsoft Visual Studio\\2017\\Community\\DIA SDK\\bin\\msdia140.dll"`)
-  await exec.exec(`regsvr32 "C:\\Program Files (x86)\\Microsoft Visual Studio\\2017\\Community\\DIA SDK\\bin\\amd64\\msdia140.dl"`)
+  //await exec.exec(`regsvr32 "C:\\Program Files (x86)\\Microsoft Visual Studio\\2017\\Enterprise\\DIA SDK\\bin\\msdia140.dll"`)
+  //await exec.exec(`regsvr32 "C:\\Program Files (x86)\\Microsoft Visual Studio\\2017\\Enterprise\\DIA SDK\\bin\\amd64\\msdia140.dl"`)
 
   //openssl
   await tc.downloadTool('https://www.openssl.org/source/openssl-1.1.1g.tar.gz', 'C:\\temp\\OpenSSL-1.1.1g.tar.gz')
@@ -321,7 +322,6 @@ async function setConfigure(version: string, openj9Version: string): Promise<voi
       //TODO 
       configureArgs += '--disable-zip-debug-info --with-freetype-include=.../freetype-2.5.3/include --with-freetype-lib=.../freetype-2.5.3/lib64'
     }
-    //TODO
   }
 
   await exec.exec(`bash configure --with-freemarker-jar=${workDir}/freemarker.jar ${bootjdkConfigure} ${configureArgs}`)

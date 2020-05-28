@@ -1,15 +1,15 @@
 name: "test"
 on:
   push:
-    # branches-ignore:
-    #   - '**'
+    branches-ignore:
+      - '**'
 jobs:
   build:
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
-        os: [windows-2016, ubuntu-16.04, macos-latest]
+        os: [windows-2016, ubuntu-18.04, macos-latest]
     steps:
     - uses: actions/checkout@v1
     - uses: sophia-guo/build-jdk-openj9@win

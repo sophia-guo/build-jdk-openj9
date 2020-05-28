@@ -3227,6 +3227,7 @@ function installDependencies(version) {
 function installCommons() {
     return __awaiter(this, void 0, void 0, function* () {
         if (!IS_WINDOWS) {
+            process.chdir(`${workDir}`);
             const freeMarker = yield tc.downloadTool(`https://sourceforge.net/projects/freemarker/files/freemarker/2.3.8/freemarker-2.3.8.tar.gz/download`);
             yield exec.exec(`sudo tar -xzf ${freeMarker} freemarker-2.3.8/lib/freemarker.jar --strip=2`);
             yield io.rmRF(`${freeMarker}`);
@@ -3242,10 +3243,19 @@ function installMacDepends() {
 }
 function installLinuxDepends(version) {
     return __awaiter(this, void 0, void 0, function* () {
-        yield exec.exec('sudo apt-get update');
-        yield exec.exec('sudo apt-get install -qq -y --no-install-recommends \
-    software-properties-common \
-    python-software-properties');
+        const ubuntuVersion = yield getOsVersion();
+        if (`${ubuntuVersion}` === '16.04') {
+            yield exec.exec('sudo apt-get update');
+            yield exec.exec('sudo apt-get install -qq -y --no-install-recommends \
+      software-properties-common \
+      python-software-properties \
+      realpath');
+        }
+        else {
+            yield exec.exec('sudo apt-get update');
+            yield exec.exec('sudo apt-get install -qq -y --no-install-recommends \
+      software-properties-common');
+        }
         //Note gcc-multilib is needed on github environment
         yield exec.exec(`sudo apt-get update`);
         yield exec.exec('sudo apt-get install -qq -y --no-install-recommends \
@@ -3272,7 +3282,6 @@ function installLinuxDepends(version) {
     make \
     nasm \
     pkg-config \
-    realpath \
     ssh \
     unzip \
     wget \
@@ -3337,8 +3346,8 @@ function installWindowsDepends(version) {
         yield exec.exec(`C:\\temp\\cuda_9.0.176_win10_network-exe.exe -s compiler_9.0 nvml_dev_9.0`);
         yield io.rmRF(`C:\\temp\\cuda_9.0.176_win10_network-exe.exe`);
         //register necessary libraries
-        yield exec.exec(`regsvr32 "C:\\Program Files (x86)\\Microsoft Visual Studio\\2017\\Community\\DIA SDK\\bin\\msdia140.dll"`);
-        yield exec.exec(`regsvr32 "C:\\Program Files (x86)\\Microsoft Visual Studio\\2017\\Community\\DIA SDK\\bin\\amd64\\msdia140.dl"`);
+        //await exec.exec(`regsvr32 "C:\\Program Files (x86)\\Microsoft Visual Studio\\2017\\Enterprise\\DIA SDK\\bin\\msdia140.dll"`)
+        //await exec.exec(`regsvr32 "C:\\Program Files (x86)\\Microsoft Visual Studio\\2017\\Enterprise\\DIA SDK\\bin\\amd64\\msdia140.dl"`)
         //openssl
         yield tc.downloadTool('https://www.openssl.org/source/openssl-1.1.1g.tar.gz', 'C:\\temp\\OpenSSL-1.1.1g.tar.gz');
         yield tc.extractTar('C:\\temp\\OpenSSL-1.1.1g.tar.gz', 'C:\\temp');
@@ -3472,7 +3481,6 @@ function setConfigure(version, openj9Version) {
                 //TODO 
                 configureArgs += '--disable-zip-debug-info --with-freetype-include=.../freetype-2.5.3/include --with-freetype-lib=.../freetype-2.5.3/lib64';
             }
-            //TODO
         }
         yield exec.exec(`bash configure --with-freemarker-jar=${workDir}/freemarker.jar ${bootjdkConfigure} ${configureArgs}`);
     });
@@ -3504,6 +3512,34 @@ function printJavaVersion(version, openj9Version) {
         yield exec.exec(`./java -version`);
         //set outputs
         core.setOutput('BuildJDKDir', `${workDir}/${openj9Version}/${jdkImages}`);
+    });
+}
+function getOsVersion() {
+    return __awaiter(this, void 0, void 0, function* () {
+        let osVersion = '';
+        const options = {};
+        let myOutput = '';
+        options.listeners = {
+            stdout: (data) => {
+                myOutput += data.toString();
+            }
+        };
+        if (IS_WINDOWS) {
+            //TODO
+        }
+        else if (`${targetOs}` === 'mac') {
+            //TODO
+        }
+        else {
+            exec.exec(`lsb_release`, ['-r', '-s'], options);
+            if (myOutput.includes('16.04')) {
+                osVersion = '16.04';
+            }
+            else {
+                osVersion = '18.04';
+            }
+        }
+        return osVersion;
     });
 }
 
