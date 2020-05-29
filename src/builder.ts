@@ -187,8 +187,8 @@ async function installWindowsDepends(version: string): Promise<void> {
   await io.rmRF(`C:\\temp\\cuda_9.0.176_win10_network-exe.exe`)
   
   //register necessary libraries
-  //await exec.exec(`regsvr32 "C:\\Program Files (x86)\\Microsoft Visual Studio\\2017\\Enterprise\\DIA SDK\\bin\\msdia140.dll"`)
-  //await exec.exec(`regsvr32 "C:\\Program Files (x86)\\Microsoft Visual Studio\\2017\\Enterprise\\DIA SDK\\bin\\amd64\\msdia140.dl"`)
+  await exec.exec(`regsvr32 "C:\\Program Files (x86)\\Microsoft Visual Studio\\2017\\Enterprise\\DIA SDK\\bin\\msdia140.dll"`)
+  await exec.exec(`regsvr32 "C:\\Program Files (x86)\\Microsoft Visual Studio\\2017\\Enterprise\\DIA SDK\\bin\\amd64\\msdia140.dl"`)
 
   //openssl
   await tc.downloadTool('https://www.openssl.org/source/openssl-1.1.1g.tar.gz', 'C:\\temp\\OpenSSL-1.1.1g.tar.gz')

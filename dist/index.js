@@ -3346,8 +3346,8 @@ function installWindowsDepends(version) {
         yield exec.exec(`C:\\temp\\cuda_9.0.176_win10_network-exe.exe -s compiler_9.0 nvml_dev_9.0`);
         yield io.rmRF(`C:\\temp\\cuda_9.0.176_win10_network-exe.exe`);
         //register necessary libraries
-        //await exec.exec(`regsvr32 "C:\\Program Files (x86)\\Microsoft Visual Studio\\2017\\Enterprise\\DIA SDK\\bin\\msdia140.dll"`)
-        //await exec.exec(`regsvr32 "C:\\Program Files (x86)\\Microsoft Visual Studio\\2017\\Enterprise\\DIA SDK\\bin\\amd64\\msdia140.dl"`)
+        yield exec.exec(`regsvr32 "C:\\Program Files (x86)\\Microsoft Visual Studio\\2017\\Enterprise\\DIA SDK\\bin\\msdia140.dll"`);
+        yield exec.exec(`regsvr32 "C:\\Program Files (x86)\\Microsoft Visual Studio\\2017\\Enterprise\\DIA SDK\\bin\\amd64\\msdia140.dl"`);
         //openssl
         yield tc.downloadTool('https://www.openssl.org/source/openssl-1.1.1g.tar.gz', 'C:\\temp\\OpenSSL-1.1.1g.tar.gz');
         yield tc.extractTar('C:\\temp\\OpenSSL-1.1.1g.tar.gz', 'C:\\temp');
