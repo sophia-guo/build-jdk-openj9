@@ -1,27 +1,19 @@
-name: "build-jdk-openj9"
-on: # rebuild any PRs and main branch changes
-  # pull_request:
+name: "test"
+on:
   push:
     branches-ignore:
       - '**'
-
 jobs:
   build:
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-16.04, macos-10.15]
+        os: [windows-2016, ubuntu-18.04, macos-latest]
     steps:
     - uses: actions/checkout@v1
-    - uses: ./
-      id: buildOpenj9
+    - uses: sophia-guo/build-jdk-openj9@win
+      id: buildJDK
       with: 
         version: 14
-    - uses: actions/upload-artifact@v2-preview
-      if: failure()
-      with:
-        name: configure_output
-        path: ./**/config.log
-
-# Test version 8: https://github.com/sophia-guo/build-jdk-openj9/runs/603106058?check_suite_focus=true
+    - run: ${{ steps.buildJDK.outputs.BuildJDKDir }}/bin/java -version
